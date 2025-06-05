@@ -1,0 +1,279 @@
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("./fonts/InstrumentSans.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Instrument Sans", sans-serif;
+}
+
+body {
+  display: flex;
+  background: #fcf8f5;
+  color: #333;
+  height: auto;
+}
+
+/*MODO ESCURO*/
+
+body.dark-mode {
+  background: #1e1e1e;
+  color: #f0f0f0;
+}
+
+body.dark-mode .book {
+  background: #2e2e2e;
+  border-color: #555;
+}
+
+body.dark-mode .sidebar,
+body.dark-mode .sidebar-right {
+  background: #333;
+}
+
+body.dark-mode header input {
+  background-color: #555;
+  color: #f0f0f0;
+}
+
+body.dark-mode .category img {
+  filter: brightness(0.8);
+}
+
+/*SIDEBARS*/
+.sidebar {
+  background: #efe5da;
+  border-right: 1px solid #ddd;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: width 0.3s ease;
+  width: 100px;
+  height: auto;
+  z-index: 2000;
+}
+
+.logo-sidebar {
+  width: 80%;
+  max-width: 150px;
+  height: auto;
+  margin-bottom: 20px;
+  opacity: 100%;
+}
+
+.logo-sidebar :hover {
+  cursor: pointer;
+}
+
+/*BOTÃO TROCAR COR*/
+
+.mode-toggle {
+  margin-top: calc(100% / 2);
+  margin-bottom: calc(100% / 2);
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  opacity: 50%;
+  width: 80%;
+  max-width: 150px;
+}
+
+.mode-toggle:hover {
+  transform: scale(1.2);
+  opacity: 100%;
+}
+
+.mode-toggle img {
+  width: 40px;
+  height: 40px;
+}
+
+.mode-toggle.expanded {
+  opacity: 100%;
+
+}
+
+.toggle-btnL {
+  background: none;
+  border: none;
+}
+
+.toggle-btnL :hover {
+  cursor: pointer;
+}
+
+/*BOTÃO INFO*/
+
+.info-button{
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  opacity: 50%;
+  width: 80%;
+  max-width: 150px;
+}
+
+.info-button:hover{
+  transform: scale(1.2);
+  opacity: 100%;
+}
+
+.info-icon{
+  width: 60%;
+  opacity: 50%;
+}
+
+.info-icon:hover{
+  opacity: 100%;
+}
+
+
+/*SIDEBAR DIREITA*/
+
+.sidebar-right {
+  width: 60px;
+  background-color: #d3c3b6;
+  height: 100vh;
+  transition: width 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 1rem;
+  box-sizing: border-box;
+  position: fixed;
+  right: 0;
+  z-index: 1000;
+}
+
+.sidebar-right.expanded {
+  width: calc(100vw - 100px);
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  position: relative;
+}
+
+header {
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+  padding-bottom: 20px;
+}
+
+header input {
+  background-color: #efe5da;
+  width: 50%;
+  padding: 15px;
+  border-radius: 50px;
+  border: none;
+  color: #635953;
+}
+
+.search-btn,
+.user-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.categories {
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+  padding: 20px 0;
+  overflow-x: auto;
+}
+
+.category {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  gap: 5px;
+}
+
+.category img {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+}
+
+.category.active {
+  font-weight: bold;
+}
+
+/* LIVROS */
+.highlight h2 {
+  margin-bottom: 20px;
+}
+
+.book-list {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.book {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  width: 150px;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  border: solid 1px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.book img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.book .detalhes {
+  position: absolute;
+  bottom: -100%;
+  left: 0;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px;
+  box-sizing: border-box;
+  transition: bottom 0.3s ease;
+}
+
+.book:hover .detalhes {
+  bottom: 0;
+}
+
+.book .title {
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.book .author {
+  font-size: 12px;
+  color: #666;
+}
+
+.book:hover {
+  cursor: pointer;
+  transition: bottom 0.3s ease;
+  box-shadow: 0 2px 5px rgb(229, 203, 132);
+  transform: scale(1.05);
+}
