@@ -1323,21 +1323,21 @@
 },
 {
     "id": "154",
-    "nome": "X-Men: A Saga da Fênix Negra",
-    "autor": "Chris Claremont",
-    "categoria": "Quadrinho",
-    "editora": "Marvel Comics",
+    "nome": "Não tenho boca e preciso gritar",
+    "autor": "Harlan Ellison",
+    "categoria": "terror",
+    "editora": "Galaxy Publishing Corp",
     "capa": "../img/livros/livro154.jpg",
-    "link": ""
+    "link": "https://notamanuscrita.com/wp-content/uploads/2015/06/visto-ellison-preciso-gritar.pdf"
 },
 {
     "id": "155",
-    "nome": "Batman: Silêncio",
-    "autor": "Jeph Loeb",
-    "categoria": "Quadrinho",
-    "editora": "DC Comics",
+    "nome": "Todos os amanhãs",
+    "autor": "CM Kösemen",
+    "categoria": "terror",
+    "editora": "Time Publishing",
     "capa": "../img/livros/livro155.jpg",
-    "link": ""
+    "link": "https://drive.google.com/file/d/0ByV5-S712cg8Tk1vQWVFZVM5S28/view?resourcekey=0-f0n8tTyFknuKmWvLl6gYFQ"
 },
 {
     "id": "156",
