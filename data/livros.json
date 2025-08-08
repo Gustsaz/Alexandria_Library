@@ -1350,12 +1350,12 @@
 },
 {
     "id": "157",
-    "nome": "Watchmen",
-    "autor": "Alan Moore",
-    "categoria": "Quadrinho",
-    "editora": "DC Comics",
+    "nome": "A menina que roubava livros",
+    "autor": "Markus Zusak",
+    "categoria": "Romance",
+    "editora": "Intrínseca",
     "capa": "../img/livros/livro157.jpg",
-    "link": ""
+    "link": "https://cdn.bookey.app/files/pdf/book/pt/a-menina-que-roubava-livros.pdf"
 },
 {
     "id": "158",
