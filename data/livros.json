@@ -1563,6 +1563,15 @@
     "editora": "Marvel Comics",
     "capa": "../img/livros/livro180.jpg",
     "link": ""
+},
+{
+    "id": "181",
+    "nome": "Cabal: Raça das Trevas",
+    "autor": "Clive Barker",
+    "categoria": "terror",
+    "editora": "DarkSide Books",
+    "capa": "../img/livros/livro181.jpg",
+    "link": "https://cdn.bookey.app/files/pdf/book/pt/cabal.pdf"
 }
 
 ]

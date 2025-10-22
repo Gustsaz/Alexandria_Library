@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enviar Livros para Firestore</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+h1, h2 {
+  text-align: center;
+}
+
+p {
+  color: #ccc;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+textarea, input {
+  width: 90%;
+  max-width: 700px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  margin-bottom: 1rem;
+  font-size: 14px;
+}
+
+textarea {
+  height: 200px;
+  font-family: monospace;
+  resize: none;
+}
+
+button {
+  padding: 12px 25px;
+  background: #1abc9c;
+  border: none;
+  border-radius: 30px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  margin-bottom: 1rem;
+}
+
+button:hover {
+  background: #16a085;
+  transform: scale(1.05);
+}
+
+pre {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 15px;
+  width: 90%;
+  max-width: 700px;
+  height: 200px;
+  overflow-y: auto;
+  color: #0f0;
+  font-family: monospace;
+  white-space: pre-wrap;
+  margin-top: 1rem;
+}
+
+section {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 700px;
+  margin-top: 2rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+label {
+  display: block;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+  </style>
+</head>
+<body>
+  <h1>Enviar Livros para Firestore</h1>
+  <p>Escolha seu <code>livros.json</code> ou cole manualmente o conteúdo abaixo.</p>
+
+  <input type="file" id="fileInput" accept=".json" />
+  <textarea id="jsonInput" placeholder='Cole aqui o JSON dos livros...'></textarea>
+  <button id="sendBtn">Enviar para Firebase</button>
+  <pre id="output"></pre>
+
+  <section>
+    <h2>Adicionar Livro Manualmente</h2>
+
+<label>Nome:</label>
+<input type="text" id="nome" placeholder="Nome do livro" />
+
+<label>Autor:</label>
+<input type="text" id="autor" placeholder="Autor do livro" />
+
+<label>Categoria:</label>
+<input type="text" id="categoria" placeholder="Categoria (ex: Suspense)" />
+
+<label>Editora:</label>
+<input type="text" id="editora" placeholder="Editora (opcional)" />
+
+<label>URL da capa:</label>
+<input type="text" id="capa" placeholder="Ex: img/livros/livro1.png" />
+
+<label>Link do PDF:</label>
+<input type="text" id="link" placeholder="Ex: https://..." />
+
+<button id="addSingleBtn">Adicionar Livro</button>
+
+  </section>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBU_XSyXF0cPv9jDeYS9fOm-ax2k5AbTmw",
+      authDomain: "alexandrialibrary-ce52f.firebaseapp.com",
+      projectId: "alexandrialibrary-ce52f",
+      storageBucket: "alexandrialibrary-ce52f.firebasestorage.app",
+      messagingSenderId: "575886368101",
+      appId: "1:575886368101:web:3091054bb09d31faacd58c",
+      measurementId: "G-GBS8Z17MVS"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const fileInput = document.getElementById("fileInput");
+    const jsonInput = document.getElementById("jsonInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const output = document.getElementById("output");
+
+    // Leitura de arquivo JSON
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        jsonInput.value = event.target.result;
+      };
+      reader.readAsText(file);
+    });
+
+    // Enviar JSON completo
+    sendBtn.addEventListener("click", async () => {
+      output.textContent = "⏳ Enviando livros...\n";
+      try {
+        const livros = JSON.parse(jsonInput.value);
+        if (!Array.isArray(livros)) {
+          output.textContent += "❌ O JSON precisa ser um array de objetos!\n";
+          return;
+        }
+
+        for (const [i, livro] of livros.entries()) {
+          if (!livro.nome || !livro.autor) {
+            output.textContent += `⚠️ Livro ${i + 1} sem nome ou autor, ignorado.\n`;
+            continue;
+          }
+          await addDoc(collection(db, "livros"), {
+            nome: livro.nome,
+            autor: livro.autor,
+            categoria: livro.categoria || "",
+            editora: livro.editora || "",
+            capa: livro.capa || "",
+            link: livro.link || ""
+          });
+          output.textContent += `✅ Livro ${i + 1}: "${livro.nome}" enviado!\n`;
+        }
+
+        output.textContent += "\n🎉 Todos os livros foram enviados!";
+      } catch (error) {
+        console.error(error);
+        output.textContent += `\n❌ Erro: ${error.message}`;
+      }
+    });
+
+    // Enviar livro individual pelos inputs
+    const addSingleBtn = document.getElementById("addSingleBtn");
+
+    addSingleBtn.addEventListener("click", async () => {
+      const nome = document.getElementById("nome").value.trim();
+      const autor = document.getElementById("autor").value.trim();
+      const categoria = document.getElementById("categoria").value.trim();
+      const editora = document.getElementById("editora").value.trim();
+      const capa = document.getElementById("capa").value.trim();
+      const link = document.getElementById("link").value.trim();
+
+      if (!nome || !autor) {
+        alert("Por favor, preencha pelo menos o nome e o autor do livro.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "livros"), {
+          nome, autor, categoria, editora, capa, link
+        });
+        alert("✅ Livro adicionado com sucesso!");
+        document.querySelectorAll("input").forEach(inp => inp.value = "");
+      } catch (error) {
+        alert("❌ Erro ao adicionar livro: " + error.message);
+      }
+    });
+  </script>
+
+</body>
+</html>
