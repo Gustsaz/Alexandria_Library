@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Alexandria Biblioteca</title>
+    <link rel="icon" href="/img/icons/LogoMiniaturaClaro.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase SDKs via CDN -->
+    <script type="module">
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBU_XSyXF0cPv9jDeYS9fOm-ax2k5AbTmw",
+            authDomain: "alexandrialibrary-ce52f.firebaseapp.com",
+            projectId: "alexandrialibrary-ce52f",
+            storageBucket: "alexandrialibrary-ce52f.firebasestorage.app",
+            messagingSenderId: "575886368101",
+            appId: "1:575886368101:web:3091054bb09d31faacd58c",
+            measurementId: "G-GBS8Z17MVS"
+        };
+
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+        import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, getDoc, query, where, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // Set up global Firebase instances for script.js to use
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+        window.firebaseProvider = provider;
+        window.firebaseSignInWithPopup = signInWithPopup;
+        window.firebaseSignOut = signOut;
+        window.firebaseOnAuthStateChanged = onAuthStateChanged;
+        window.firebaseGetDocs = getDocs;
+        window.firebaseCollection = collection;
+        window.firebaseDoc = doc;
+        window.firebaseGetDoc = getDoc;
+        window.firebaseUpdateDoc = updateDoc;
+        window.firebaseSetDoc = setDoc;
+        window.firebaseQuery = query;
+        window.firebaseWhere = where;
+
+        // Dispatch an event when Firebase is ready
+        document.dispatchEvent(new CustomEvent('firebase-loaded'));
+    </script>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <button class="toggle-btnL"><img draggable="false" src="img/LogoEscuro.png" alt="Logo Alexandria"
+                class="logo-sidebar"></button>
+
+        <button class="mode-toggle">
+            <img draggable="false" id="theme-icon" src="img/Escuro.png" alt="Tema" class="tema-icone">
+        </button>
+        <button class="download-button"><img draggable="false" id="download-icon" src="img/DownloadEscuro.png"
+                class="download-icon" alt="Baixados"></button>
+        <button class="saved-button"><img draggable="false" id="saved-icon" src="img/SavedEscuro.png" class="saved-icon"
+                alt="salvos"></button>
+        <button class="visua-button"><img draggable="false" id="visua-icon" src="img/EyeEscuro.png" class="visua-icon"
+                alt="já lidos"></button>
+        <button class="info-button"><img draggable="false" id="info-icon" src="img/InfoEscuro.png" class="info-icon"
+                alt="informação"></button>
+    </div>
+
+    <div class="main-content">
+
+        <header>
+            <div class="search-container">
+                <input type="text" placeholder="Buscar livros...">
+                <div class="search-results hidden"></div>
+            </div>
+
+
+            <div class="user-info-container">
+                <!-- User info will be populated by JS -->
+                <div id="user-section">
+                    <button class="user-btn" id="signInBtn">
+                        <img draggable="false" src="img/ContaEscuro.png" id="conta-icon"
+                            style="width: 25px; height: 25px;">
+                        Sign In with Google
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="citacao-container" id="citacao-container">
+
+            <div class="citacao-imagem scroll-reveal-cascade delay-1">
+                <img src="img/platao.png" alt="Platão">
+            </div>
+            <!-- Citação -->
+            <div class="citacao-texto scroll-reveal-cascade delay-2">
+                <p class="citacao-frase">“O livro é um mestre que fala, mas que não responde”</p>
+                <p class="citacao-autor">- Platão</p>
+            </div>
+
+            <div class="citacao-livros" id="citacao-livros">
+                <div class="livro livro-1 scroll-reveal-cascade delay-1">
+                    <img id="citacaoLivro1" src="/img/livros/livro19.jpg" alt="Livro aleatório 1">
+                </div>
+                <div class="livro livro-2 scroll-reveal-cascade delay-2">
+                    <img id="citacaoLivro2" src="/img/livros/livro20.jpg" alt="Livro aleatório 2">
+                </div>
+                <div class="livro livro-3 scroll-reveal-cascade delay-3">
+                    <img id="citacaoLivro3" src="/img/livros/livro22.jpg" alt="Livro aleatório 3">
+                </div>
+            </div>
+
+        </div>
+
+        <div class="barra-feia"></div>
+
+        <nav class="categories" id="categories">
+            <!-- Categories will be populated by JS -->
+        </nav>
+
+        <section class="highlight scroll-reveal" data-category="Todos" id="todos-section">
+            <h2>Todos</h2>
+            <div class="book-list" id="todos-list">
+                <!-- Books will be populated by JS -->
+            </div>
+        </section>
+
+        <!-- Add sections for each category: Aventura, Fantasia, etc. -->
+        <section class="highlight scroll-reveal" data-category="Aventura" id="aventura-section" style="display: none;">
+            <h2>Aventura</h2>
+            <div class="book-list" id="aventura-list"></div>
+        </section>
+
+        <section class="highlight scroll-reveal" data-category="Fantasia" id="fantasia-section" style="display: none;">
+            <h2>Fantasia</h2>
+            <div class="book-list" id="fantasia-list"></div>
+        </section>
+
+        <section class="highlight scroll-reveal" data-category="Romance" id="romance-section" style="display: none;">
+            <h2>Romance</h2>
+            <div class="book-list" id="romance-list"></div>
+        </section>
+
+        <section class="highlight scroll-reveal" data-category="Suspense" id="suspense-section" style="display: none;">
+            <h2>Suspense</h2>
+            <div class="book-list" id="suspense-list"></div>
+        </section>
+
+        <section class="highlight scroll-reveal" data-category="Scifi" id="scifi-section" style="display: none;">
+            <h2>Sci-fi</h2>
+            <div class="book-list" id="scifi-list"></div>
+        </section>
+
+        <section class="highlight scroll-reveal" data-category="terror" id="terror-section" style="display: none;">
+            <h2>Terror</h2>
+            <div class="book-list" id="terror-list"></div>
+        </section>
+
+        <section class="highlight scroll-reveal" data-category="Quadrinho" id="quadrinho-section"
+            style="display: none;">
+            <h2>Quadrinhos</h2>
+            <div class="book-list" id="quadrinho-list"></div>
+        </section>
+
+        <section class="highlight scroll-reveal" data-category="Gutenberg" id="gutenberg-section"
+            style="display: none;">
+            <h2>Clássicos (Gutenberg)</h2>
+            <div class="book-list" id="gutenberg-list">
+                <!-- Load from API -->
+            </div>
+        </section>
+
+        <!-- Saved, Downloaded, Read sections will be shown/made when logged in -->
+        <section class="highlight scroll-reveal" data-category="download" id="download-section" style="display: none;">
+            <h2>Baixados</h2>
+            <div class="book-list" id="download-list"></div>
+        </section>
+
+        <section class="highlight highlight-saved scroll-reveal" data-category="salvos" id="salvos-section"
+            style="display: none;">
+            <h2>Salvos</h2>
+            <div class="book-list" id="salvos-list"></div>
+        </section>
+
+        <section class="highlight scroll-reveal" data-category="lidos" id="lidos-section" style="display: none;">
+            <h2>Já Lidos</h2>
+            <div class="book-list" id="lidos-list"></div>
+        </section>
+
+        <br>
+
+        <footer class="footer">
+            <div class="footer-container">
+                <div class="footer-about">
+                    <h2>Alexandria Biblioteca</h2>
+                    <p>Explore uma vasta coleção de livros em PDF gratuitamente. Conhecimento ao alcance de todos.
+                    </p>
+                    <br>
+                </div>
+
+                <div class="footer-social">
+                    <h3>Nos siga</h3>
+                    <br>
+                    <div class="social-icons">
+                        <a href="https://www.facebook.com/profile.php?id=61576951933968"><img src="img/faceClaro.png"
+                                alt="Facebook" /></a>
+                        <a href="https://www.instagram.com/bibl.iotecaalexandria/"><img src="img/instaClaro.png"
+                                alt="Instagram" /></a>
+                        <a href="https://x.com/_Alexandria_Lib"><img src="img/XClaro.png" alt="Twitter" /></a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2025 Alexandria Biblioteca. Todos os direitos reservados.</p>
+            </div>
+            <br>
+        </footer>
+
+        <div id="message"></div>
+
+    </div>
+
+    <div class="right-sidebar" id="rightSidebar"></div>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>

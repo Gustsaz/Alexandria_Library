@@ -1,13 +1,35 @@
+// Alexandria Library - Firebase Integrated.js
+// Global variables
+let currentUser = null;
+let allBooks = [];
+let userData = { savedBooks: [], downloadedBooks: [], readBooks: [] };
+
 const toggleBtnL = document.querySelector(".toggle-btnL");
 const Logo = document.querySelector(".logo-sidebar");
 const Info = document.getElementById("info-icon");
-const Down = document.getElementById("download-icon");
-const Visu = document.getElementById("visua-icon");
-const Salvo = document.getElementById("saved-icon");
-const Conta = document.getElementById("conta-icon");
-const rightDownload = document.querySelector(".download-btn");
-const rightFechar = document.querySelector(".fechar-btn");
-const rightLido = document.querySelector(".visua-icon");
+const Down = document.getElementById("download-icon") || { src: '' };
+const Visu = document.getElementById("visua-icon") || { src: '' };
+const Salvo = document.getElementById("saved-icon") || { src: '' };
+const Conta = document.getElementById("conta-icon") || { src: '' };
+const rightDownload = document.querySelector(".download-btn") || {};
+const rightFechar = document.querySelector(".fechar-btn") || {};
+const rightLido = document.querySelector(".visua-icon") || {};
+
+// Firebase utilities
+const auth = window.firebaseAuth;
+const db = window.firebaseDb;
+const provider = window.firebaseProvider;
+const signInWithPopup = window.firebaseSignInWithPopup;
+const signOut = window.firebaseSignOut;
+const onAuthStateChanged = window.firebaseOnAuthStateChanged;
+const getDocs = window.firebaseGetDocs;
+const collection = window.firebaseCollection;
+const doc = window.firebaseDoc;
+const getDoc = window.firebaseGetDoc;
+const updateDoc = window.firebaseUpdateDoc;
+const setDoc = window.firebaseSetDoc;
+const query = window.firebaseQuery;
+const where = window.firebaseWhere;
 
 const toggleThemeBtn = document.querySelector(".mode-toggle");
 const themeIcon = document.getElementById("theme-icon");
@@ -83,7 +105,7 @@ function openRightSidebar(pdfUrl, livroId = null, isLoggedIn = false) {
     sidebar.classList.add("expanded");
 
     const showDownload = pdfUrl && livroId && isLoggedIn;
-        
+
     sidebar.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px;">
             <div style="display: flex; gap: 10px; align-items: center;">
@@ -108,54 +130,189 @@ function openRightSidebar(pdfUrl, livroId = null, isLoggedIn = false) {
             <p style="padding: 1rem;">Este livro não possui PDF disponível.</p>
         `}
     `;
-    
+
     const iframe = document.getElementById("pdf-viewer");
-if (iframe) {
-    iframe.addEventListener('load', () => {
-        // tenta várias vezes para acompanhar os resizes do Drive
-        nudgeIframeRepeated(iframe);
-    }, { once: true });
+    if (iframe) {
+        iframe.addEventListener('load', () => {
+            // tenta várias vezes para acompanhar os resizes do Drive
+            nudgeIframeRepeated(iframe);
+        }, { once: true });
+    }
+
 }
 
+// Load books from Firestore
+async function loadBooks() {
+    try {
+        const querySnapshot = await firebaseGetDocs(firebaseCollection(firebaseDb, 'livros'));
+        allBooks = [];
+        querySnapshot.forEach(doc_snap => {
+            allBooks.push({ id: doc_snap.id, ...doc_snap.data() });
+        });
+
+        populateBooks(allBooks);
+        populateCategories(allBooks);
+        carregarCapasCitacao(allBooks);
+        iniciarTrocaDeCapas();
+    } catch (error) {
+        console.error('Error loading books:', error);
+    }
+}
+
+// Populate book lists
+function populateBooks(books) {
+    const categoryMappings = {
+        Todos: 'todos-list',
+        Aventura: 'aventura-list',
+        Fantasia: 'fantasia-list',
+        Romance: 'romance-list',
+        suspense: 'suspense-list', // Match data-category, but function checks 'Suspense' vs 'suspense'
+        Scifi: 'scifi-list',
+        Terror: 'terror-list',
+        Quadrinho: 'quadrinho-list'
+    };
+
+    // Clear existing
+    Object.values(categoryMappings).forEach(listId => {
+        const list = document.getElementById(listId);
+        if (list) list.innerHTML = '';
+    });
+
+    // Populate
+    books.forEach(livro => {
+        const categoria = livro.categoria || 'Todos';
+        const listId = categoryMappings[categoria] || categoryMappings.Todos;
+        const list = document.getElementById(listId);
+        if (list) {
+            const bookDiv = createBookElement(livro);
+            list.appendChild(bookDiv);
+        }
+    });
+}
+
+// Create book element
+function createBookElement(livro) {
+    const div = document.createElement('div');
+    div.classList.add('book');
+    div.id = `livro-${livro.id}`;
+    div.onclick = () => openRightSidebar(livro.link, livro.id, !!currentUser);
+
+    const isSaved = userData.savedBooks.includes(livro.id);
+
+    div.innerHTML = `
+        <img draggable="false" src="${livro.capa}" alt="Capa do livro ${livro.nome}">
+        <div class="detalhes">
+            <h3>${livro.nome}</h3>
+            <p><strong>Autor:</strong> ${livro.autor}</p>
+            <p><strong>Editora:</strong> ${livro.editora}</p>
+        </div>
+        ${currentUser ? `
+            <button class="salvar-btn ${isSaved ? 'salvo' : ''}" onclick="event.stopPropagation(); salvarLivro('${livro.id}', this)">
+                <img src="img/SalvarEscuro.png" alt="Salvar" class="salvar-img">
+            </button>
+        ` : ''}
+    `;
+
+    return div;
+}
+
+// Populate categories nav
+function populateCategories(books) {
+    const categoriesContainer = document.getElementById('categories');
+    if (!categoriesContainer) return;
+
+    const categoryCount = {};
+    books.forEach(livro => {
+        const cat = livro.categoria || 'Todos';
+        categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+    });
+
+    // Include hardcoded counts or calculate
+    const categories = [
+        { name: 'Todos', count: books.length },
+        { name: 'Aventura', count: categoryCount.Aventura || 0 },
+        { name: 'Fantasia', count: categoryCount.Fantasia || 0 },
+        { name: 'Romance', count: categoryCount.Romance || 0 },
+        { name: 'Scifi', count: categoryCount.Scifi || 0 },
+        { name: 'Suspense', count: categoryCount.Suspense || 0 },
+        { name: 'Terror', count: categoryCount.terror || 0 },
+        { name: 'Quadrinho', count: categoryCount.Quadrinho || 0 },
+        { name: 'Gutenberg', count: 20 } // Fixed
+    ];
+
+    // Map category names to image filenames
+    const iconMap = {
+        'Todos': 'todos.png',
+        'Aventura': 'aventura.png',
+        'Fantasia': 'fantasia.png',
+        'Romance': 'romance.png',
+        'Scifi': 'ficcao.png',
+        'Suspense': 'suspense.png',
+        'Terror': 'horror.png',
+        'Quadrinho': 'quadrinho.png',
+        'Gutenberg': 'gutenberg.png'
+    };
+
+    categoriesContainer.innerHTML = categories.map(cat => {
+        const iconName = iconMap[cat.name] || 'todos.png';
+        return `
+        <button class="category ${cat.name === 'Todos' ? 'active' : ''} scroll-reveal-cascade delay-1" data-category="${cat.name}" style="background: #f0f0f0 !important; color: #333 !important; border: 2px solid #ddd !important; padding: 10px !important; margin: 5px !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; cursor: pointer !important; border-radius: 5px !important; font-size: 14px !important; opacity: 1 !important; visibility: visible !important; z-index: 100 !important; position: relative !important;">
+            <img draggable="false" src="img/icons/${iconName}" alt="${cat.name}" style="width: 24px; height: 24px;">
+            ${cat.name} (${cat.count})
+        </button>`;
+    }).join('');
+
+    // Re-attach event listeners for categories
+    document.querySelectorAll('.category').forEach(cat => {
+        cat.addEventListener('click', () => {
+            const categoriaSelecionada = cat.dataset.category;
+            document.querySelectorAll('.category').forEach(c => c.classList.remove('active'));
+            cat.classList.add('active');
+
+            document.querySelectorAll('.highlight[data-category]').forEach(section => {
+                section.style.display = categoriaSelecionada === "Todos" || section.dataset.category.includes(categoriaSelecionada) ? "block" : "none";
+            });
+
+            // Ensure Gutenberg books are loaded when category is selected
+            if (categoriaSelecionada === "Gutenberg") {
+                loadGutenbergBooks();
+            }
+        });
+    });
 }
 
 function baixarPdf(pdfUrl, livroId) {
+    if (!currentUser) {
+        alert("Você precisa estar logado para baixar este livro.");
+        return;
+    }
+
     registrarDownload(livroId);
 
     const downloadUrl = corrigirLinkGoogleDrive(pdfUrl);
 
     if (downloadUrl.includes('drive.google.com')) {
-        // se for link do google drive
         window.open(downloadUrl, '_blank');
     } else {
-        // Se for PDF local:
+        // Assume direct PDF link
         const link = document.createElement('a');
-        link.href = `download.php?url=${encodeURIComponent(downloadUrl)}`;
+        link.href = downloadUrl;
         link.download = `livro_${livroId}.pdf`;
-        document.body.appendChild(link);
+        link.target = '_blank';
         link.click();
-        document.body.removeChild(link);
     }
 }
 
 function registrarDownload(livroId) {
-    if (!isUserLoggedIn) {
+    if (!currentUser) {
         alert("Você precisa estar logado para baixar este livro.");
         return;
     }
 
-    fetch('registrar_download.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ livroId })
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (!data.sucesso) {
-                alert("Erro: " + (data.erro || "Desconhecido"));
-            }
-        })
-        .catch(err => console.error('Erro:', err));
+    if (!userData.downloadedBooks.includes(livroId)) {
+        userData.downloadedBooks.push(livroId);
+        saveUserData();
+    }
 }
 
 function corrigirLinkGoogleDrive(url) {
@@ -168,64 +325,54 @@ function corrigirLinkGoogleDrive(url) {
 }
 
 function marcarComoLido(livroId) {
-    if (!isUserLoggedIn) {
+    if (!currentUser) {
         alert("Você precisa estar logado para marcar um livro como lido.");
         return;
     }
 
-    fetch('marcar_lido.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ livroId })
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.sucesso) {
-                location.reload(); // ou atualizar dinamicamente
-            } else {
-                alert("Erro ao marcar como lido: " + (data.erro || "Desconhecido"));
-            }
-        })
-        .catch(err => console.error("Erro ao marcar como lido:", err));
+    if (!userData.readBooks.includes(livroId)) {
+        userData.readBooks.push(livroId);
+        saveUserData();
+    }
+}
+
+// Populate user lists
+function populateUserLists() {
+    // Clear existing
+    document.getElementById('download-list').innerHTML = '';
+    document.getElementById('salvos-list').innerHTML = '';
+    document.getElementById('lidos-list').innerHTML = '';
+
+    // Populate downloaded
+    userData.downloadedBooks.forEach(id => {
+        const livro = allBooks.find(l => l.id === id);
+        if (livro) {
+            const div = createBookElement(livro);
+            document.getElementById('download-list').appendChild(div);
+        }
+    });
+
+    // Populate saved
+    userData.savedBooks.forEach(id => {
+        const livro = allBooks.find(l => l.id === id);
+        if (livro) {
+            const div = createBookElement(livro);
+            document.getElementById('salvos-list').appendChild(div);
+        }
+    });
+
+    // Populate read
+    userData.readBooks.forEach(id => {
+        const livro = allBooks.find(l => l.id === id);
+        if (livro) {
+            const div = createBookElement(livro);
+            document.getElementById('lidos-list').appendChild(div);
+        }
+    });
 }
 
 function closeRightSidebar() {
     const sidebar = document.getElementById("rightSidebar");
-    const iframe  = document.getElementById("pdf-viewer");
-
-    if (iframe) {
-        try {
-            const livroId = iframe.getAttribute("data-livro-id");
-
-            const scrollContainer =
-                iframe.contentWindow.document.documentElement ||
-                iframe.contentWindow.document.body;
-
-            const scrollTop    = scrollContainer.scrollTop;
-            const scrollHeight = scrollContainer.scrollHeight;
-            const progresso    = scrollHeight
-                                   ? scrollTop / scrollHeight   // evita 0 / 0
-                                   : 0;
-
-            /* debug*/
-            console.log({ livroId, scrollTop, scrollHeight, progresso });
-            /* ---------------------- */
-
-            if (livroId && Number.isFinite(progresso) && progresso >= 0) {
-                fetch('salvar_progresso.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ livroId, progresso })
-                })
-                .then(r => r.json())
-                .then(d => console.log('salvar_progresso ⇒', d))
-                .catch(err => console.warn('Erro ao salvar progresso:', err));
-            }
-        } catch (err) {
-            console.warn("Não foi possível capturar o progresso:", err);
-        }
-    }
-
     sidebar.classList.remove("expanded");
     sidebar.innerHTML = "";
 }
@@ -324,8 +471,156 @@ window.onload = function () {
             nomeInput.removeAttribute("required");
         }
     }
-    
+
 };
+
+// Firebase utilities will be set by index.html
+let firebaseAuth, firebaseDb, firebaseProvider, firebaseSignInWithPopup, firebaseSignOut, firebaseOnAuthStateChanged, firebaseGetDocs, firebaseCollection, firebaseDoc, firebaseGetDoc, firebaseUpdateDoc, firebaseSetDoc;
+
+// Wait for Firebase to load, then set up all Firebase-dependent functions
+document.addEventListener('firebase-loaded', () => {
+    // Set Firebase instances
+    const auth = window.firebaseAuth;
+    const db = window.firebaseDb;
+    const provider = window.firebaseProvider;
+    const signInWithPopup = window.firebaseSignInWithPopup;
+    const signOut = window.firebaseSignOut;
+    const onAuthStateChanged = window.firebaseOnAuthStateChanged;
+    const getDocs = window.firebaseGetDocs;
+    const collection = window.firebaseCollection;
+    const doc = window.firebaseDoc;
+    const getDoc = window.firebaseGetDoc;
+    const updateDoc = window.firebaseUpdateDoc;
+    const setDoc = window.firebaseSetDoc;
+
+    // Override global functions to work after Firebase loads
+    window.googleSignIn = async function () {
+        try {
+            const result = await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error('Error signing in:', error);
+            showMessage('Erro ao fazer login', 'error');
+        }
+    };
+
+    window.loadBooks = async function () {
+        try {
+            const querySnapshot = await getDocs(collection(db, 'livros'));
+            allBooks = [];
+            querySnapshot.forEach(doc_snap => {
+                allBooks.push({ id: doc_snap.id, ...doc_snap.data() });
+            });
+
+            populateBooks(allBooks);
+            populateCategories(allBooks);
+            carregarCapasCitacao(allBooks);
+            iniciarTrocaDeCapas();
+        } catch (error) {
+            console.error('Error loading books:', error);
+        }
+    };
+
+    window.loadUserData = async function (uid) {
+        const userDoc = await getDoc(doc(db, 'usuarios', uid));
+        if (userDoc.exists()) {
+            userData = {
+                savedBooks: userDoc.data().savedBooks || [],
+                downloadedBooks: userDoc.data().downloadedBooks || [],
+                readBooks: userDoc.data().readBooks || []
+            };
+            populateUserLists();
+        } else {
+            await setDoc(doc(db, 'usuarios', uid), {
+                savedBooks: [],
+                downloadedBooks: [],
+                readBooks: []
+            });
+            userData = { savedBooks: [], downloadedBooks: [], readBooks: [] };
+        }
+    };
+
+    window.saveUserData = async function () {
+        if (currentUser) {
+            await updateDoc(doc(db, 'usuarios', currentUser.uid), userData);
+        }
+    };
+
+    // Firebase Auth listener
+    onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+        updateUserInterface(user);
+        await loadBooks();
+        loadGutenbergBooks();
+        if (user) {
+            await loadUserData(user.uid);
+        }
+    });
+});
+
+// Update UI based on auth state
+function updateUserInterface(user) {
+    const userSection = document.getElementById('user-section');
+    if (user) {
+        userSection.innerHTML = `
+            <span class="welcome-message">Olá, ${user.displayName || user.email}! &nbsp;</span>
+            <button class="user-btn" id="logoutBtn">
+                <img draggable="false" src="img/ContaEscuro.png" id="conta-icon" style="width: 25px; height: 25px;">
+            </button>
+            <div class="user-form-bubble hidden" id="logoutBubble">
+                <p>Você está logado como: <strong>${user.displayName || user.email}</strong></p>
+                <button id="logoutButton">Sair</button>
+            </div>
+        `;
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            document.getElementById('logoutBubble').classList.toggle('hidden');
+        });
+
+        document.getElementById('logoutButton').addEventListener('click', async () => {
+            await signOut(auth);
+            location.reload();
+        });
+
+        // Show user-specific sections
+        showUserSections(true);
+    } else {
+        userSection.innerHTML = `
+            <button class="user-btn" id="signInBtn">
+                <img draggable="false" src="img/ContaEscuro.png" id="conta-icon" style="width: 25px; height: 25px;">
+                Sign In with Google
+            </button>
+        `;
+
+        document.getElementById('signInBtn').addEventListener('click', googleSignIn);
+
+        showUserSections(false);
+    }
+}
+
+// Show/hide user-specific sections
+function showUserSections(show) {
+    const sections = ['download-section', 'salvos-section', 'lidos-section'];
+    sections.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = show ? 'block' : 'none';
+    });
+}
+
+// Show message
+function showMessage(text, type) {
+    const messageDiv = document.getElementById('message');
+    messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+    messageDiv.style.display = 'block';
+    setTimeout(() => messageDiv.style.display = 'none', 5000);
+}
+
+// Sign In Button Event
+document.addEventListener('DOMContentLoaded', () => {
+    const signInBtn = document.getElementById('signInBtn');
+    if (signInBtn) {
+        signInBtn.addEventListener('click', googleSignIn);
+    }
+});
 
 
 const bookList = document.querySelector('.book-list');
@@ -397,106 +692,70 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("auth-form");
     const userMessage = document.getElementById("userMessage");
 
-    if (!searchInput || !resultsContainer) {
-        console.error("Elemento de busca não encontrado!");
-        return;
-    }
+    if (searchInput && resultsContainer) {
+        // Search functionality
+        function atualizarResultados(query) {
+            resultsContainer.innerHTML = "";
 
-    let livros = [];
+            if (query.trim() === "") {
+                resultsContainer.classList.add("hidden");
+                return;
+            }
 
-    fetch("data/livros.json")
-        .then(response => response.json())
-        .then(data => {
-            livros = data;
-            carregarCapasCitacao(livros);
-            iniciarTrocaDeCapas();
+            const filtrados = allBooks.filter(livro =>
+                livro.nome.toLowerCase().includes(query.toLowerCase())
+            );
 
-        })
-        .catch(error => {
-            console.error("Erro ao carregar livros.json:", error);
+            if (filtrados.length === 0) {
+                const vazio = document.createElement("div");
+                vazio.classList.add("result-item");
+                vazio.textContent = "Nenhum livro encontrado";
+                resultsContainer.appendChild(vazio);
+            } else {
+                filtrados.forEach(livro => {
+                    const item = document.createElement("div");
+                    item.classList.add("result-item");
+
+                    item.innerHTML = `
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="${livro.capa}" alt="${livro.nome}" style="width: 40px; height: 60px; object-fit: cover; border: 1px solid #ccc;">
+                        <div>
+                          <strong>${livro.nome}</strong><br>
+                          <small>${livro.autor}</small>
+                        </div>
+                      </div>
+                    `;
+
+                    item.addEventListener("click", () => {
+                        searchInput.value = livro.nome;
+                        resultsContainer.classList.add("hidden");
+
+                        if (livro.link) {
+                            openRightSidebar(livro.link, livro.id, !!currentUser);
+                        } else {
+                            alert("Este livro não possui PDF disponível.");
+                        }
+                    });
+
+                    resultsContainer.appendChild(item);
+                });
+            }
+
+            resultsContainer.classList.remove("hidden");
+        }
+
+        searchInput.addEventListener("input", () => {
+            const query = searchInput.value;
+            atualizarResultados(query);
         });
 
-    if (window.authMessage) {
-    const box = document.getElementById("userMessage");
-    if (box) {
-        box.textContent = window.authMessage.text;
-        box.classList.add("user-alert", window.authMessage.type);
-        box.style.display = "block";
-
-        // mostr ao forms
-        const bubble = document.getElementById("userForm");
-        if (bubble) bubble.classList.remove("hidden");
-
-        setTimeout(() => {
-            location.reload();
-        }, 2000);
+        // Close search results when clicking outside
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest(".search-container")) {
+                resultsContainer.classList.add("hidden");
+            }
+        });
     }
-}
-
-
-    // atualiza a bubsca
-    function atualizarResultados(query) {
-        resultsContainer.innerHTML = "";
-
-        if (query.trim() === "") {
-            resultsContainer.classList.add("hidden");
-            return;
-        }
-
-        const filtrados = livros.filter(livro =>
-            livro.nome.toLowerCase().includes(query.toLowerCase())
-        );
-
-        if (filtrados.length === 0) {
-            const vazio = document.createElement("div");
-            vazio.classList.add("result-item");
-            vazio.textContent = "Nenhum livro encontrado";
-            resultsContainer.appendChild(vazio);
-        } else {
-            filtrados.forEach(livro => {
-                const item = document.createElement("div");
-                item.classList.add("result-item");
-
-                item.innerHTML = `
-                  <div style="display: flex; align-items: center; gap: 10px;">
-                    <img src="${livro.capa}" alt="${livro.nome}" style="width: 40px; height: 60px; object-fit: cover; border: 1px solid #ccc;">
-                    <div>
-                      <strong>${livro.nome}</strong><br>
-                      <small>${livro.autor}</small>
-                    </div>
-                  </div>
-                `;
-
-                item.addEventListener("click", () => {
-                    searchInput.value = livro.nome;
-                    resultsContainer.classList.add("hidden");
-
-                    if (livro.link) {
-                        openRightSidebar(livro.link, livro.id, typeof isUserLoggedIn !== 'undefined' ? isUserLoggedIn : false);
-                    } else {
-                        alert("Este livro não possui PDF disponível.");
-                    }
-                });
-
-                resultsContainer.appendChild(item);
-            });
-        }
-
-        resultsContainer.classList.remove("hidden");
-    }
-
-    // aparacer enquanto digita
-    searchInput.addEventListener("input", () => {
-        const query = searchInput.value;
-        atualizarResultados(query);
-    });
-
-    // fecha se cluicar fora
-    document.addEventListener("click", (e) => {
-        if (!e.target.closest(".search-container")) {
-            resultsContainer.classList.add("hidden");
-        }
-    });
 });
 
 
@@ -581,54 +840,29 @@ const allBookLists = document.querySelectorAll('.book-list');
 
 allBookLists.forEach(applyDraggableScroll);
 
-//salvar os livro
-function salvarLivro(livroId, buttonElement) {
-    fetch('salvar_livro.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ livroId })
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (!data.sucesso) {
-                console.error("Erro ao salvar:", data.erro || "Desconhecido");
-                return;
-            }
+// Save/unsave book for user
+async function salvarLivro(livroId, buttonElement) {
+    if (!currentUser) {
+        alert("Você precisa estar logado para salvar livros.");
+        return;
+    }
 
-            buttonElement.classList.toggle("salvo");
+    const isSaved = userData.savedBooks.includes(livroId);
+    if (isSaved) {
+        // Remove from saved
+        userData.savedBooks = userData.savedBooks.filter(id => id !== livroId);
+    } else {
+        // Add to saved
+        userData.savedBooks.push(livroId);
+    }
 
-            const bookElement = buttonElement.closest(".book");
-            const savedList = document.querySelector(".highlight-saved .book-list");
+    await saveUserData();
 
-            if (!savedList || !bookElement) return;
+    // Update button
+    buttonElement.classList.toggle("salvo");
 
-            const existing = savedList.querySelector('#livro-' + livroId);
-
-            if (buttonElement.classList.contains("salvo")) {
-                // Adiciona na lista de salvos (se ainda n�o estiver)
-                if (!existing) {
-                    const clone = bookElement.cloneNode(true);
-
-                    // Corrige onclick do bot�o no clone
-                    const newBtn = clone.querySelector(".salvar-btn");
-                    if (newBtn) {
-                        newBtn.classList.add("salvo");
-                        newBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            salvarLivro(livroId, newBtn);
-                        };
-                    }
-
-                    savedList.appendChild(clone);
-                }
-            } else {
-                // Remove da lista de salvos
-                if (existing) {
-                    existing.remove();
-                }
-            }
-        })
-        .catch(err => console.error("Erro ao salvar livro:", err));
+    // Reload saved section
+    populateUserLists();
 }
 
 //livros gutenberg
@@ -660,7 +894,7 @@ function loadGutenbergBooks() {
                 `;
 
                 div.addEventListener("click", () => {
-                    openRightSidebar(link, livro.id, typeof isUserLoggedIn !== "undefined" ? isUserLoggedIn : false);
+                    openRightSidebar(link, livro.id, !!currentUser);
                 });
 
                 container.appendChild(div);
@@ -701,7 +935,7 @@ function carregarCapasCitacao(livros) {
                     return;
                 }
 
-                if (typeof isUserLoggedIn !== "undefined" && isUserLoggedIn) {
+                if (currentUser) {
                     openRightSidebar(link, id, true);
                 } else {
                     alert("Você precisa estar logado para ler este livro.");
@@ -779,13 +1013,14 @@ if (logoBtn) {
         const sidebar = document.getElementById("rightSidebar");
 
         if (sidebar && sidebar.classList.contains("expanded")) {
-            closeRightSidebar(); // s� fecha a sidebar se estiver aberta
+            closeRightSidebar(); // Close sidebar if open
         } else {
-            location.reload(); // sen�o, recarrega a p�gina
+            location.reload(); // Reload page otherwise
         }
     });
+}
 
-    // 1. Fechar sidebar ao clicar fora
+// Close sidebar when clicking outside
 document.addEventListener("click", (e) => {
     const sidebar = document.getElementById("rightSidebar");
 
@@ -802,35 +1037,3 @@ document.addEventListener("click", (e) => {
         closeRightSidebar();
     }
 });
-
-// 2. Reabrir a sidebar mostrando o �ltimo livro lido
-const rightSidebar = document.getElementById("rightSidebar");
-
-if (rightSidebar) {
-    rightSidebar.addEventListener("click", () => {
-        if (!rightSidebar.classList.contains("expanded")) {
-            fetch("recuperar_progresso.php", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ buscarUltimo: true })
-            })
-            .then(res => res.json())
-            .then(data => {
-                const ultimoId = data.ultimo_livro_id;
-                if (!ultimoId) return;
-
-                fetch("data/livros.json")
-                    .then(res => res.json())
-                    .then(livros => {
-                        const livro = livros.find(l => l.id === ultimoId);
-                        if (livro && livro.link) {
-                            openRightSidebar(livro.link, livro.id, typeof isUserLoggedIn !== "undefined" ? isUserLoggedIn : false);
-                        }
-                    });
-            })
-            .catch(err => console.error("Erro ao abrir o último livro:", err));
-        }
-    });
-}
-
-}
