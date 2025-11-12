@@ -1,143 +1,463 @@
 <!DOCTYPE html>
-
 <html lang="pt-BR">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Enviar Livros para Firestore</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel - Alexandria Library</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
-* { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
-body {
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 100vh;
-  padding: 2rem;
-}
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      display: flex;
+      height: 100vh;
+      margin: 0;
+    }
 
-h1, h2 {
-  text-align: center;
-}
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+    }
 
-p {
-  color: #ccc;
-  text-align: center;
-  margin-bottom: 1.5rem;
-}
+    .sidebar h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-size: 20px;
+    }
 
-textarea, input {
-  width: 90%;
-  max-width: 700px;
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  outline: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  margin-bottom: 1rem;
-  font-size: 14px;
-}
+    .sidebar button {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      text-align: left;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: 0.3s;
+    }
 
-textarea {
-  height: 200px;
-  font-family: monospace;
-  resize: none;
-}
+    .sidebar button.active,
+    .sidebar button:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
 
-button {
-  padding: 12px 25px;
-  background: #1abc9c;
-  border: none;
-  border-radius: 30px;
-  color: white;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  margin-bottom: 1rem;
-}
+    /* Conteúdo principal */
+    .main-content {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
 
-button:hover {
-  background: #16a085;
-  transform: scale(1.05);
-}
+    h1,
+    h2 {
+      text-align: center;
+    }
 
-pre {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 10px;
-  padding: 15px;
-  width: 90%;
-  max-width: 700px;
-  height: 200px;
-  overflow-y: auto;
-  color: #0f0;
-  font-family: monospace;
-  white-space: pre-wrap;
-  margin-top: 1rem;
-}
+    input,
+    textarea {
+      width: 90%;
+      max-width: 700px;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      margin-bottom: 1rem;
+      font-size: 14px;
+    }
 
-section {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 1.5rem;
-  width: 90%;
-  max-width: 700px;
-  margin-top: 2rem;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-}
+    button {
+      padding: 10px 20px;
+      background: #1abc9c;
+      border: none;
+      border-radius: 30px;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.3s;
+      margin-right: 10px;
+    }
 
-label {
-  display: block;
-  margin-top: 10px;
-  font-weight: 600;
-}
+    button:hover {
+      background: #16a085;
+    }
 
+    section {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1.5rem;
+      max-width: 800px;
+      margin: 2rem auto;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    pre {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      width: 90%;
+      max-width: 700px;
+      height: 200px;
+      overflow-y: auto;
+      color: #0f0;
+      margin: 1rem auto;
+      white-space: pre-wrap;
+    }
+
+    /* Tabela de livros */
+    .livros-section {
+      max-width: 900px;
+      margin: 2rem auto;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .search-bar {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      margin-bottom: 1rem;
+      font-size: 15px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    td img {
+      width: 60px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      color: #1abc9c;
+      cursor: pointer;
+      font-size: 18px;
+      margin-right: 8px;
+    }
+
+    .action-btn.delete {
+      color: #e74c3c;
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      display: none;
+    }
+
+    .modal-content {
+      background: #203a43;
+      padding: 2rem;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      color: white;
+    }
+
+    .modal-content h3 {
+      text-align: center;
+    }
+
+    .modal-content input {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .modal-buttons {
+      text-align: right;
+      margin-top: 1rem;
+    }
+
+    .modal-buttons button {
+      border-radius: 8px;
+    }
+
+    .search-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+
+    #filterBtn {
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 18px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #filterBtn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .filter-menu {
+      position: absolute;
+      top: 45px;
+      right: 0;
+      background: rgba(32, 58, 67, 0.98);
+      border-radius: 10px;
+      padding: 1rem;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+    }
+
+    .filter-menu input,
+    .filter-menu select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .filter-menu button {
+      border-radius: 8px;
+      padding: 8px 15px;
+    }
+
+    /* --- Filtro aprimorado --- */
+    .filter-menu select,
+    .filter-menu input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255, 255, 255, 0.12);
+      color: white;
+      font-size: 15px;
+    }
+
+    .filter-menu option {
+      background: #2c5364;
+      color: #fff;
+      padding: 8px;
+    }
+
+    .filter-menu option:hover {
+      background: #1abc9c;
+      color: #000;
+    }
+
+    .filter-menu label {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .filter-menu button {
+      border-radius: 8px;
+      padding: 8px 15px;
+      font-weight: 600;
+      background: #1abc9c;
+      color: #fff;
+      transition: 0.3s;
+    }
+
+    .filter-menu button:hover {
+      background: #16a085;
+    }
+
+    /* Checkbox de seleção múltipla */
+    .select-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 18px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .select-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .delete-selected {
+      display: none;
+      background: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .delete-selected:hover {
+      background: #c0392b;
+    }
+
+    td.checkbox-cell {
+      text-align: center;
+    }
   </style>
 </head>
+
 <body>
-  <h1>Enviar Livros para Firestore</h1>
-  <p>Escolha seu <code>livros.json</code> ou cole manualmente o conteúdo abaixo.</p>
+  <div class="sidebar">
+    <h2>Painel</h2>
+    <button id="btnEnvio" class="active"><i class="fa-solid fa-upload"></i> Envio</button>
+    <button id="btnLivros"><i class="fa-solid fa-book"></i> Livros</button>
+  </div>
 
-  <input type="file" id="fileInput" accept=".json" />
-  <textarea id="jsonInput" placeholder='Cole aqui o JSON dos livros...'></textarea>
-  <button id="sendBtn">Enviar para Firebase</button>
-  <pre id="output"></pre>
+  <div class="main-content">
+    <!-- ABA ENVIO -->
+    <div id="abaEnvio">
+      <h1>Enviar Livros para Firestore</h1>
+      <p>Escolha seu <code>livros.json</code> ou cole manualmente o conteúdo abaixo.</p>
+      <input type="file" id="fileInput" accept=".json" />
+      <br>
 
-  <section>
-    <h2>Adicionar Livro Manualmente</h2>
+      <textarea id="jsonInput" placeholder='Cole aqui o JSON dos livros...'></textarea>
+      <br>
 
-<label>Nome:</label>
-<input type="text" id="nome" placeholder="Nome do livro" />
+      <button id="sendBtn">Enviar JSON</button>
+      <pre id="output"></pre>
 
-<label>Autor:</label>
-<input type="text" id="autor" placeholder="Autor do livro" />
+      <section>
+        <h2>Adicionar Livro Manualmente</h2>
+        <label>Nome:</label>
+        <br>
+        <input type="text" id="nome">
+        <br>
+        <label>Autor:</label>
+        <br>
+        <input type="text" id="autor">
+        <label>Categoria:</label>
+        <input type="text" id="categoria">
+        <br>
+        <label>Editora:</label>
+        <br>
+        <input type="text" id="editora">
+        <br>
+        <label>URL da capa:</label>
+        <input type="text" id="capa">
+        <br>
+        <label>Link do PDF:</label>
+        <input type="text" id="link">
+        <button id="addSingleBtn">Adicionar Livro</button>
+      </section>
+    </div>
 
-<label>Categoria:</label>
-<input type="text" id="categoria" placeholder="Categoria (ex: Suspense)" />
+    <!-- ABA LIVROS -->
+    <div id="abaLivros" style="display:none;">
+      <h1>Gerenciar Livros</h1>
+      <div class="livros-section">
 
-<label>Editora:</label>
-<input type="text" id="editora" placeholder="Editora (opcional)" />
+        <div class="search-container">
+          <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar por nome...">
+          <button id="filterBtn"><i class="fa-solid fa-filter"></i></button>
+          <button id="selectModeBtn" class="select-btn"><i class="fa-solid fa-square-check"></i></button>
+          <button id="deleteSelected" class="delete-selected"><i class="fa-solid fa-trash"></i> Apagar
+            Selecionados</button>
+          <div id="filterMenu" class="filter-menu">
+            <label>Filtrar por:</label>
+            <select id="filterType">
+              <option value="todos">Todos</option>
+              <option value="categoria">Categoria</option>
+              <option value="autor">Autor</option>
+              <option value="editora">Editora</option>
+            </select>
+            <input type="text" id="filterValue" placeholder="Digite o valor...">
+            <button id="applyFilter">Aplicar</button>
+          </div>
+        </div>
 
-<label>URL da capa:</label>
-<input type="text" id="capa" placeholder="Ex: img/livros/livro1.png" />
+        <table id="livrosTable">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Autor</th>
+              <th>Categoria</th>
+              <th>Editora</th>
+              <th>Ações</th>
+              <th>Capa</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-<label>Link do PDF:</label>
-<input type="text" id="link" placeholder="Ex: https://..." />
-
-<button id="addSingleBtn">Adicionar Livro</button>
-
-  </section>
+  <!-- MODAL DE EDIÇÃO -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h3>Editar Livro</h3>
+      <input type="text" id="editNome" placeholder="Nome">
+      <input type="text" id="editAutor" placeholder="Autor">
+      <input type="text" id="editCategoria" placeholder="Categoria">
+      <input type="text" id="editEditora" placeholder="Editora">
+      <input type="text" id="editCapa" placeholder="Capa (URL)">
+      <input type="text" id="editLink" placeholder="Link (PDF)">
+      <div class="modal-buttons">
+        <button id="saveEdit">Salvar</button>
+        <button id="cancelEdit">Cancelar</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBU_XSyXF0cPv9jDeYS9fOm-ax2k5AbTmw",
@@ -152,24 +472,298 @@ label {
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    const abaEnvio = document.getElementById("abaEnvio");
+    const abaLivros = document.getElementById("abaLivros");
+    const btnEnvio = document.getElementById("btnEnvio");
+    const btnLivros = document.getElementById("btnLivros");
+
+    btnEnvio.addEventListener("click", () => {
+      abaEnvio.style.display = "block";
+      abaLivros.style.display = "none";
+      btnEnvio.classList.add("active");
+      btnLivros.classList.remove("active");
+    });
+
+    btnLivros.addEventListener("click", () => {
+      abaEnvio.style.display = "none";
+      abaLivros.style.display = "block";
+      btnLivros.classList.add("active");
+      btnEnvio.classList.remove("active");
+      carregarLivros();
+    });
+
+    // Restaurar última aba
+    window.addEventListener("load", () => {
+      const ultimaAba = localStorage.getItem("abaAtual") || "envio";
+      if (ultimaAba === "livros") {
+        btnLivros.click();
+      } else {
+        btnEnvio.click();
+      }
+    });
+
+    // Salvar aba ativa
+    [btnEnvio, btnLivros].forEach(btn => {
+      btn.addEventListener("click", () => {
+        localStorage.setItem("abaAtual", btn === btnLivros ? "livros" : "envio");
+      });
+    });
+
+    function normalizarTexto(txt) {
+      return txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    // --- Carregar livros e restaurar estado ---
+    async function carregarLivros() {
+      const tbody = document.querySelector("#livrosTable tbody");
+      tbody.innerHTML = "<tr><td colspan='7'>Carregando...</td></tr>";
+      const snapshot = await getDocs(collection(db, "livros"));
+      const livros = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+
+      exibirLivros(livros);
+
+      // Restaurar rolagem
+      const scroll = localStorage.getItem("scrollPos");
+      if (scroll) document.querySelector(".main-content").scrollTop = parseInt(scroll);
+    }
+
+    function exibirLivros(livros) {
+      const tbody = document.querySelector("#livrosTable tbody");
+      const searchInput = document.getElementById("searchInput");
+      const filterBtn = document.getElementById("filterBtn");
+      const filterMenu = document.getElementById("filterMenu");
+      const filterType = document.getElementById("filterType");
+      const filterValue = document.getElementById("filterValue");
+      const applyFilter = document.getElementById("applyFilter");
+      const selectModeBtn = document.getElementById("selectModeBtn");
+      const deleteSelectedBtn = document.getElementById("deleteSelected");
+
+      let selectMode = false;
+      let selecionados = new Set();
+      let lastSelectedIndex = null;
+
+      // Criar select de categorias
+      let selectCategoria = document.createElement("select");
+      selectCategoria.id = "filterCategoria";
+      selectCategoria.style.display = "none";
+      selectCategoria.innerHTML = `<option value="">Todas as categorias</option>`;
+      filterMenu.insertBefore(selectCategoria, applyFilter);
+
+      const categoriasUnicas = [...new Set(livros.map(l => l.categoria?.trim()).filter(c => c))].sort();
+      categoriasUnicas.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        selectCategoria.appendChild(opt);
+      });
+
+      // Restaurar filtro salvo
+      let filtroAtivo = JSON.parse(localStorage.getItem("filtroAtivo") || '{"tipo":"todos","valor":""}');
+      if (filtroAtivo.tipo === "categoria" && filtroAtivo.valor) {
+        filterType.value = "categoria";
+        selectCategoria.value = filtroAtivo.valor;
+        filterValue.style.display = "none";
+        selectCategoria.style.display = "block";
+      } else if (filtroAtivo.tipo !== "todos") {
+        filterType.value = filtroAtivo.tipo;
+        filterValue.value = filtroAtivo.valor;
+      }
+
+      // Mostrar / esconder menu de filtro
+      filterBtn.onclick = () => {
+        filterMenu.style.display = filterMenu.style.display === "flex" ? "none" : "flex";
+      };
+
+      filterType.onchange = () => {
+        if (filterType.value === "categoria") {
+          filterValue.style.display = "none";
+          selectCategoria.style.display = "block";
+        } else {
+          selectCategoria.style.display = "none";
+          filterValue.style.display = "block";
+        }
+      };
+
+      // Aplicar filtro
+      applyFilter.onclick = () => {
+        filtroAtivo = {
+          tipo: filterType.value,
+          valor: filterType.value === "categoria"
+            ? normalizarTexto(selectCategoria.value)
+            : normalizarTexto(filterValue.value)
+        };
+        localStorage.setItem("filtroAtivo", JSON.stringify(filtroAtivo));
+        filterMenu.style.display = "none";
+        renderLista();
+      };
+
+      // Alternar modo seleção
+      selectModeBtn.onclick = () => {
+        selectMode = !selectMode;
+        selecionados.clear();
+        deleteSelectedBtn.style.display = selectMode ? "inline-block" : "none";
+        renderLista();
+      };
+
+      // Apagar selecionados
+      deleteSelectedBtn.onclick = async () => {
+        if (!selecionados.size) return alert("Nenhum livro selecionado.");
+        if (!confirm(`Apagar ${selecionados.size} livros?`)) return;
+        for (const id of selecionados) await deleteDoc(doc(db, "livros", id));
+        alert("Livros apagados!");
+        carregarLivros();
+      };
+
+      function renderLista() {
+        const termo = normalizarTexto(searchInput.value);
+        const filtrados = livros.filter(livro => {
+          const nomeOk = normalizarTexto(livro.nome).includes(termo);
+          if (filtroAtivo.tipo === "todos" || !filtroAtivo.valor) return nomeOk;
+          const campo = normalizarTexto(livro[filtroAtivo.tipo] || "");
+          return nomeOk && campo.includes(filtroAtivo.valor);
+        });
+
+        tbody.innerHTML = filtrados.map(l => `
+      <tr>
+        ${selectMode ? `<td class="checkbox-cell"><input type="checkbox" data-id="${l.id}" ${selecionados.has(l.id) ? "checked" : ""}></td>` : ""}
+        <td>${l.nome}</td>
+        <td>${l.autor}</td>
+        <td>${l.categoria || '-'}</td>
+        <td>${l.editora || '-'}</td>
+        <td>
+          <button class="action-btn edit" data-id="${l.id}"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="action-btn delete" data-id="${l.id}"><i class="fa-solid fa-trash"></i></button>
+        </td>
+        <td><img src="${l.capa || 'img/default.png'}" alt="Capa"></td>
+      </tr>
+    `).join('');
+      }
+
+      renderLista();
+      searchInput.oninput = renderLista;
+
+      // Checkbox e ações
+      tbody.addEventListener("click", async e => {
+        // --- seleção múltipla ---
+        if (selectMode) {
+          const row = e.target.closest("tr");
+          if (!row) return;
+          const check = row.querySelector("input[type='checkbox']");
+          const id = check?.dataset.id;
+          if (!id) return;
+
+          const rows = Array.from(tbody.querySelectorAll("tr"));
+          const currentIndex = rows.indexOf(row);
+
+          // SHIFT: selecionar intervalo
+          if (e.shiftKey && lastSelectedIndex !== null) {
+            const start = Math.min(lastSelectedIndex, currentIndex);
+            const end = Math.max(lastSelectedIndex, currentIndex);
+            for (let i = start; i <= end; i++) {
+              const cbox = rows[i].querySelector("input[type='checkbox']");
+              if (cbox) {
+                cbox.checked = true;
+                selecionados.add(cbox.dataset.id);
+              }
+            }
+          } else {
+            // clique normal (linha ou checkbox)
+            if (selecionados.has(id)) {
+              selecionados.delete(id);
+              check.checked = false;
+            } else {
+              selecionados.add(id);
+              check.checked = true;
+            }
+            lastSelectedIndex = currentIndex;
+          }
+        }
+
+        // --- botões de editar / apagar ---
+        if (e.target.closest(".edit")) {
+          const id = e.target.closest(".edit").dataset.id;
+          const livro = livros.find(l => l.id === id);
+          abrirModalEdicao(livro);
+        } else if (e.target.closest(".delete")) {
+          const id = e.target.closest(".delete").dataset.id;
+          if (confirm("Tem certeza que deseja apagar este livro?")) {
+            await deleteDoc(doc(db, "livros", id));
+            alert("Livro apagado!");
+            carregarLivros();
+          }
+        }
+      });
+
+      tbody.addEventListener("click", async e => {
+        if (e.target.closest(".edit")) {
+          const id = e.target.closest(".edit").dataset.id;
+          const livro = livros.find(l => l.id === id);
+          abrirModalEdicao(livro);
+        } else if (e.target.closest(".delete")) {
+          const id = e.target.closest(".delete").dataset.id;
+          if (confirm("Tem certeza que deseja apagar este livro?")) {
+            await deleteDoc(doc(db, "livros", id));
+            alert("Livro apagado!");
+            carregarLivros();
+          }
+        }
+      });
+
+      // Salvar rolagem
+      document.querySelector(".main-content").addEventListener("scroll", e => {
+        localStorage.setItem("scrollPos", e.target.scrollTop);
+      });
+    }
+
+
+    // --- Modal edição ---
+    const modal = document.getElementById("editModal");
+    const saveEdit = document.getElementById("saveEdit");
+    const cancelEdit = document.getElementById("cancelEdit");
+    let livroAtual = null;
+
+    function abrirModalEdicao(livro) {
+      modal.style.display = "flex";
+      livroAtual = livro;
+      document.getElementById("editNome").value = livro.nome || "";
+      document.getElementById("editAutor").value = livro.autor || "";
+      document.getElementById("editCategoria").value = livro.categoria || "";
+      document.getElementById("editEditora").value = livro.editora || "";
+      document.getElementById("editCapa").value = livro.capa || "";
+      document.getElementById("editLink").value = livro.link || "";
+    }
+
+    cancelEdit.addEventListener("click", () => modal.style.display = "none");
+
+    saveEdit.addEventListener("click", async () => {
+      const atualizado = {
+        nome: document.getElementById("editNome").value.trim(),
+        autor: document.getElementById("editAutor").value.trim(),
+        categoria: document.getElementById("editCategoria").value.trim(),
+        editora: document.getElementById("editEditora").value.trim(),
+        capa: document.getElementById("editCapa").value.trim(),
+        link: document.getElementById("editLink").value.trim()
+      };
+      await updateDoc(doc(db, "livros", livroAtual.id), atualizado);
+      alert("Livro atualizado!");
+      modal.style.display = "none";
+      carregarLivros();
+    });
+
+    // --- Parte de envio JSON e manual (mantida igual) ---
     const fileInput = document.getElementById("fileInput");
     const jsonInput = document.getElementById("jsonInput");
     const sendBtn = document.getElementById("sendBtn");
     const output = document.getElementById("output");
 
-    // Leitura de arquivo JSON
-    fileInput.addEventListener("change", (e) => {
+    fileInput.addEventListener("change", e => {
       const file = e.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
-      reader.onload = (event) => {
-        jsonInput.value = event.target.result;
-      };
+      reader.onload = ev => jsonInput.value = ev.target.result;
       reader.readAsText(file);
     });
 
-    // Enviar JSON completo
     sendBtn.addEventListener("click", async () => {
       output.textContent = "⏳ Enviando livros...\n";
       try {
@@ -178,57 +772,33 @@ label {
           output.textContent += "❌ O JSON precisa ser um array de objetos!\n";
           return;
         }
-
         for (const [i, livro] of livros.entries()) {
           if (!livro.nome || !livro.autor) {
             output.textContent += `⚠️ Livro ${i + 1} sem nome ou autor, ignorado.\n`;
             continue;
           }
-          await addDoc(collection(db, "livros"), {
-            nome: livro.nome,
-            autor: livro.autor,
-            categoria: livro.categoria || "",
-            editora: livro.editora || "",
-            capa: livro.capa || "",
-            link: livro.link || ""
-          });
+          await addDoc(collection(db, "livros"), livro);
           output.textContent += `✅ Livro ${i + 1}: "${livro.nome}" enviado!\n`;
         }
-
         output.textContent += "\n🎉 Todos os livros foram enviados!";
-      } catch (error) {
-        console.error(error);
-        output.textContent += `\n❌ Erro: ${error.message}`;
+      } catch (err) {
+        output.textContent += `❌ Erro: ${err.message}`;
       }
     });
 
-    // Enviar livro individual pelos inputs
-    const addSingleBtn = document.getElementById("addSingleBtn");
-
-    addSingleBtn.addEventListener("click", async () => {
+    document.getElementById("addSingleBtn").addEventListener("click", async () => {
       const nome = document.getElementById("nome").value.trim();
       const autor = document.getElementById("autor").value.trim();
       const categoria = document.getElementById("categoria").value.trim();
       const editora = document.getElementById("editora").value.trim();
       const capa = document.getElementById("capa").value.trim();
       const link = document.getElementById("link").value.trim();
-
-      if (!nome || !autor) {
-        alert("Por favor, preencha pelo menos o nome e o autor do livro.");
-        return;
-      }
-
-      try {
-        await addDoc(collection(db, "livros"), {
-          nome, autor, categoria, editora, capa, link
-        });
-        alert("✅ Livro adicionado com sucesso!");
-        document.querySelectorAll("input").forEach(inp => inp.value = "");
-      } catch (error) {
-        alert("❌ Erro ao adicionar livro: " + error.message);
-      }
+      if (!nome || !autor) return alert("Preencha nome e autor!");
+      await addDoc(collection(db, "livros"), { nome, autor, categoria, editora, capa, link });
+      alert("✅ Livro adicionado!");
+      document.querySelectorAll("input").forEach(i => i.value = "");
     });
   </script>
-
 </body>
+
 </html>
