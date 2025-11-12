@@ -1466,3 +1466,26 @@ body.dark-mode .user-form-bubble input{
 .fade-transition {
   transition: opacity 0.3s ease-in-out;
 }
+
+.book.lido {
+  filter: grayscale(70%) brightness(0.8);
+  opacity: 0.8;
+  position: relative;
+}
+
+.book.lido::after {
+  content: "\f06e"; /* ícone de olho do Font Awesome */
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: rgba(100, 100, 100, 0.9);
+  font-size: 48px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+body.dark-mode .book.lido::after {
+  color: rgba(220, 220, 220, 0.8);
+}

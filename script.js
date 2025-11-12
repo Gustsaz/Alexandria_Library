@@ -201,6 +201,9 @@ function populateBooks(books) {
             list.appendChild(bookDiv);
         }
     });
+
+    aplicarStatusLidos();
+
 }
 
 
@@ -227,8 +230,25 @@ function createBookElement(livro) {
         ` : ''}
     `;
 
+    // 🔹 aplica o marcador de “lido” se o usuário tiver lido este livro
+    const isRead = userData.readBooks.includes(livro.id);
+    if (isRead) {
+        div.classList.add('lido');
+    }
     return div;
 }
+
+// 🔹 Aplica visualmente o status "lido" a todos os livros do usuário
+function aplicarStatusLidos() {
+    if (!userData || !userData.readBooks) return;
+
+    userData.readBooks.forEach(livroId => {
+        document.querySelectorAll(`#livro-${livroId}`).forEach(bookDiv => {
+            bookDiv.classList.add('lido');
+        });
+    });
+}
+
 
 // Populate categories nav
 function populateCategories(books) {
@@ -351,7 +371,19 @@ function marcarComoLido(livroId) {
         userData.readBooks.push(livroId);
         saveUserData();
     }
+
+    // 🔹 Marca visualmente em todas as instâncias do livro (todas as categorias)
+    document.querySelectorAll(`#livro-${livroId}`).forEach(bookDiv => {
+        bookDiv.classList.add('lido');
+    });
+
+    // 🔹 Atualiza a seção "Já Lidos" automaticamente
+    populateUserLists();
+    // 🔹 Aplica visualmente o estilo de "lido" em todas as categorias
+    aplicarStatusLidos();
+
 }
+
 
 // Populate user lists
 function populateUserLists() {
@@ -576,8 +608,10 @@ document.addEventListener('firebase-loaded', () => {
         loadGutenbergBooks();
         if (user) {
             await loadUserData(user.uid);
+            aplicarStatusLidos(); // garante marcação mesmo após recarregar
         }
     });
+
 });
 
 // Update UI based on auth state
